@@ -16,12 +16,12 @@ const access_token = 'df25870717f8a6fb8653ce5c9a4e28a6';
 const vimeoClient = new Vimeo(client_id, client_secret, access_token);
 // Database connection configuration
 const pool = new Pool({
-  user: 'postgres',        // Replace with your database username
-  host: 'localhost',
-  database: 'AFMIZ',       // Replace with your database name
-  password: '123qwe',      // Replace with your database password
-  port: 5432,
-});
+  user: 'postgres.fyicvakkuqjejskhmrwa',
+  host: 'aws-0-eu-central-1.pooler.supabase.com',
+  database: 'postgres', // default Supabase database
+  password: 'Hunzamabhisvo#19', // Enter your password here
+  port: 6543,
+})
 
 // Set up CORS middleware
 app.use(cors({ origin: true, credentials: true }));
