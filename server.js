@@ -15,13 +15,15 @@ const access_token = 'df25870717f8a6fb8653ce5c9a4e28a6';
 
 const vimeoClient = new Vimeo(client_id, client_secret, access_token);
 // Database connection configuration
+// Database connection configuration
 const pool = new Pool({
   user: 'postgres.fyicvakkuqjejskhmrwa',
   host: 'aws-0-eu-central-1.pooler.supabase.com',
   database: 'postgres', // default Supabase database
   password: 'Hunzamabhisvo#19', // Enter your password here
-  port: 6543,
+  port: 6543,
 })
+;
 
 // Set up CORS middleware
 app.use(cors({ origin: true, credentials: true }));
@@ -102,6 +104,30 @@ app.get('/sermons', async (req, res) => {
     res.status(500).json({ error: 'An error occurred while fetching the sermons' });
   }
 });
+// GET Featured Sermon
+app.get('/featured', async (req, res) => {
+  try {
+    // Query to fetch the featured sermon
+    const query = `
+      SELECT id, title, speaker, description, video_link, thumbnail, "date", branch_id, is_featured, priority
+      FROM public.sermons
+      WHERE is_featured = TRUE
+      ORDER BY priority ASC
+      LIMIT 1;
+    `;
+
+    const result = await db.query(query);
+
+    if (result.rows.length > 0) {
+      res.status(200).json(result.rows[0]); // Send the featured sermon
+    } else {
+      res.status(404).json({ message: 'No featured sermon found' });
+    }
+  } catch (error) {
+    console.error('Error fetching featured sermon:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 
 
@@ -122,20 +148,61 @@ app.get('/devotions', async (req, res) => {
       return res.status(400).json({ error: 'Branch ID is required' });
     }
 
-    // Query the devotions table for the selected branch
-    const devotionsResult = await pool.query('SELECT content, title FROM public.dailydevotions WHERE branch_id = $1', [branchId]);
+    // Get the current date (without time)
+    const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Query the devotions table for the selected branch and today's date
+    const devotionsResult = await pool.query(
+      `SELECT id, title, "content", created_at, branch_id, is_general
+       FROM public.dailydevotions
+       WHERE branch_id = $1 AND created_at::date = $2`,
+      [branchId, currentDate]
+    );
 
     if (devotionsResult.rowCount === 0) {
-      return res.status(404).json({ error: 'No devotions found for this branch' });
+      return res.status(404).json({ error: 'No devotions found for this branch and date' });
     }
 
-    // Send the devotions as a JSON response
+    // Send the devotion(s) as a JSON response
     res.json(devotionsResult.rows);
   } catch (err) {
     console.error('Error fetching devotions:', err);
     res.status(500).json({ error: 'An error occurred while fetching devotions' });
   }
 });
+app.get('/todays-word', async (req, res) => {
+  try {
+    // Check if branch_id is in the session or request
+    const branchId = req.session?.branch_id || req.query.branch_id;
+
+    if (!branchId) {
+      return res.status(400).json({ error: 'Branch ID is required' });
+    }
+
+    // Get the current date (without time)
+    const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Query the todays_word table for the selected branch and today's date
+    const wordResult = await pool.query(
+      `SELECT id, scripture, content, branch_id, date, created_at
+       FROM public.todays_word
+       WHERE branch_id = $1 AND date = $2`,
+      [branchId, currentDate]
+    );
+
+    if (wordResult.rowCount === 0) {
+      return res.status(404).json({ error: 'No word found for this branch and date' });
+    }
+
+    // Send the word(s) as a JSON response
+    res.json(wordResult.rows);
+  } catch (err) {
+    console.error('Error fetching "Today`s Word":', err);
+    res.status(500).json({ error: 'An error occurred while fetching "Today\'s Word"' });
+  }
+});
+
+
 // Route to fetch all announcements for the current branch
 app.get('/announcements', async (req, res) => {
   try {
